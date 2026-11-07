@@ -9,7 +9,15 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Feest 40">
 <title>Tijn &amp; Martijn 40 · Fotoapp</title>
-<link rel="manifest" href="manifest.webmanifest">
+<script>
+  // tv-modus krijgt een eigen installeerbare app ("Fotomuur") die direct in de tv-weergave opent
+  (function () {
+    var tv = /[?&]scherm/.test(location.search);
+    var l = document.createElement('link'); l.rel = 'manifest';
+    l.href = tv ? 'manifest-tv.webmanifest' : 'manifest.webmanifest';
+    document.head.appendChild(l);
+  })();
+</script>
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -202,6 +210,14 @@
     .stage .cap { font-size: 28px; }
     .stage .new { font-size: 22px; }
   }
+  .tv-bar { position: absolute; top: 18px; right: 18px; z-index: 6; display: flex; gap: 10px; align-items: center; opacity: 0; transition: opacity .4s; pointer-events: none; }
+  .tv-bar.show { opacity: 1; pointer-events: auto; }
+  .tv-btn, .tv-cast { height: 52px; min-width: 52px; border-radius: 999px; border: 1px solid var(--line); background: rgba(24, 48, 41, .85); color: var(--text); display: inline-flex; align-items: center; justify-content: center; padding: 0 16px; font-weight: 600; font-size: 15px; }
+  .tv-btn svg { width: 22px; height: 22px; }
+  .tv-cast { padding: 0 13px; cursor: pointer; }
+  google-cast-launcher { display: block; width: 26px; height: 26px; --disconnected-color: #f5efe2; --connected-color: #e3c27a; cursor: pointer; }
+  .cast-msg { position: absolute; left: 50%; top: 24px; transform: translate(-50%, -20px); z-index: 6; background: var(--gold); color: var(--bg-2); font-weight: 600; font-size: 17px; padding: 10px 18px; border-radius: 999px; opacity: 0; transition: opacity .4s, transform .4s; pointer-events: none; max-width: 80%; text-align: center; }
+  .cast-msg.show { opacity: 1; transform: translate(-50%, 0); }
   .fs-hint { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,.6); padding: 6px 14px; border-radius: 999px; font-size: 13px; color: var(--muted); z-index: 5; transition: opacity 1s; }
 </style>
 </head>
@@ -326,6 +342,12 @@
     <div class="new" id="newTag">Nieuw!</div>
     <div class="cap" id="scrCap"></div>
     <div class="wait" id="scrWait">Nog geen foto's… scan de QR-code en maak de eerste!</div>
+    <div class="tv-bar" id="tvBar" hidden>
+      <span class="tv-cast" id="tvCastWrap" hidden title="Casten naar tv"><google-cast-launcher></google-cast-launcher></span>
+      <button class="tv-btn" id="tvInstall" type="button" hidden>App installeren</button>
+      <button class="tv-btn" id="tvFull" type="button" aria-label="Volledig scherm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    </div>
+    <div class="cast-msg" id="castMsg" role="status"></div>
   </div>
   <aside class="side">
     <div class="portrait"><img src="tijn-martijn.jpg" alt=""></div>
@@ -433,16 +455,18 @@ async function fetchList() {
 }
 
 /* ================= SCHERMMODUS ================= */
+// Google Cast: laat leeg om foto's via de standaard Chromecast-ontvanger te sturen.
+// Na registratie van een eigen ontvanger (zie README) hier de App-ID invullen;
+// dan draait de complete fotomuur zelfstandig op de Chromecast.
+const CAST_APP_ID = '';
+const IS_RECEIVER = new URLSearchParams(location.search).has('cast');
+
 if (SCREEN) {
   document.body.classList.add('scherm');
   const layers = [[$('imgA'), $('bgA')], [$('imgB'), $('bgB')]];
   let cur = 0, shown = new Set(), firstLoad = true, newQueue = [], cycle = [], timer = null;
-
-  const hint = document.createElement('div');
-  hint.className = 'fs-hint'; hint.textContent = 'Klik ergens voor volledig scherm';
-  document.body.appendChild(hint);
-  setTimeout(() => hint.style.opacity = 0, 6000);
-  document.addEventListener('click', () => { document.documentElement.requestFullscreen && document.documentElement.requestFullscreen().catch(() => {}); hint.remove(); });
+  let currentPhoto = null;
+  let onPhotoShown = () => {};
 
   async function refresh() {
     const list = await fetchList();
@@ -475,6 +499,8 @@ if (SCREEN) {
       $('scrCap').textContent = '📷 ' + (item.p.name || 'Gast');
       $('scrCap').classList.add('on');
       $('newTag').classList.toggle('on', item.isNew);
+      currentPhoto = item.p;
+      onPhotoShown(item.p, item.isNew);
       timer = setTimeout(next, item.isNew ? 8000 : 6500);
     };
     pre.onload = show;
@@ -487,16 +513,93 @@ if (SCREEN) {
   refresh();
   setInterval(refresh, 3000);
 
-  // scherm niet laten uitgaan en de muisaanwijzer verbergen
-  let wake = null;
-  async function keepAwake() {
-    try { if ('wakeLock' in navigator && !document.hidden) wake = await navigator.wakeLock.request('screen'); } catch (e) {}
+  if (IS_RECEIVER) {
+    /* ---- Deze pagina draait óp de Chromecast (eigen ontvanger) ---- */
+    document.body.style.cursor = 'none';
+    const sdk = document.createElement('script');
+    sdk.src = 'https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js';
+    sdk.onload = () => {
+      try {
+        const opts = new cast.framework.CastReceiverOptions();
+        opts.disableIdleTimeout = true;      // niet na een paar minuten afsluiten
+        opts.skipPlayersLoad = true;         // geen videospeler nodig
+        cast.framework.CastReceiverContext.getInstance().start(opts);
+      } catch (e) {}
+    };
+    document.head.appendChild(sdk);
+  } else {
+    /* ---- Bediening op tablet/laptop: casten, volledig scherm, installeren ---- */
+    const bar = $('tvBar');
+    bar.hidden = false;
+    let barTimer = null;
+    const showBar = () => { bar.classList.add('show'); clearTimeout(barTimer); barTimer = setTimeout(() => bar.classList.remove('show'), 6000); };
+    showBar();
+    document.addEventListener('click', showBar);
+    document.addEventListener('mousemove', showBar);
+    $('tvFull').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const d = document.documentElement;
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      else if (d.requestFullscreen) d.requestFullscreen().catch(() => {});
+    });
+    const updInstall = () => { $('tvInstall').hidden = !installEvt; };
+    updInstall(); window.__onInstallReady = updInstall;
+    $('tvInstall').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (!installEvt) return;
+      const evt = installEvt; installEvt = null; updInstall();
+      try { evt.prompt(); await evt.userChoice; } catch (err) {}
+    });
+
+    // scherm niet laten uitgaan en de muisaanwijzer verbergen
+    async function keepAwake() {
+      try { if ('wakeLock' in navigator && !document.hidden) await navigator.wakeLock.request('screen'); } catch (e) {}
+    }
+    keepAwake();
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) keepAwake(); });
+    let cursorTimer = null;
+    const showCursor = () => { document.body.style.cursor = ''; clearTimeout(cursorTimer); cursorTimer = setTimeout(() => document.body.style.cursor = 'none', 3000); };
+    document.addEventListener('mousemove', showCursor); showCursor();
+
+    /* ---- Google Cast ---- */
+    const castMsg = (txt) => { $('castMsg').textContent = txt; $('castMsg').classList.toggle('show', !!txt); };
+    function castPhoto(p) {
+      if (!p || CAST_APP_ID) return;
+      try {
+        const session = cast.framework.CastContext.getInstance().getCurrentSession();
+        if (!session) return;
+        const info = new chrome.cast.media.MediaInfo(thumb(p.id, 1920), 'image/jpeg');
+        info.metadata = new chrome.cast.media.PhotoMediaMetadata();
+        info.metadata.title = 'Foto van ' + (p.name || 'Gast');
+        session.loadMedia(new chrome.cast.media.LoadRequest(info)).catch(() => {});
+      } catch (e) {}
+    }
+    window.__onGCastApiAvailable = (ok) => {
+      if (!ok) return;
+      try {
+        const ctx = cast.framework.CastContext.getInstance();
+        ctx.setOptions({
+          receiverApplicationId: CAST_APP_ID || chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
+          autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
+        });
+        $('tvCastWrap').hidden = false;
+        ctx.addEventListener(cast.framework.CastContextEventType.SESSION_STATE_CHANGED, (ev) => {
+          const S = cast.framework.SessionState;
+          if (ev.sessionState === S.SESSION_STARTED || ev.sessionState === S.SESSION_RESUMED) {
+            if (CAST_APP_ID) castMsg('De fotomuur draait nu zelfstandig op de tv 📺 Je kunt deze tablet wegleggen.');
+            else { castMsg('Foto\'s worden naar de tv gecast 📺 Laat deze app openstaan.'); castPhoto(currentPhoto); }
+            setTimeout(() => castMsg(''), 7000);
+          } else if (ev.sessionState === S.SESSION_ENDED) {
+            castMsg('Casten gestopt.'); setTimeout(() => castMsg(''), 3000);
+          }
+        });
+        onPhotoShown = (p) => castPhoto(p);
+      } catch (e) {}
+    };
+    const sender = document.createElement('script');
+    sender.src = 'https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1';
+    document.head.appendChild(sender);
   }
-  keepAwake();
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) keepAwake(); });
-  let cursorTimer = null;
-  const showCursor = () => { document.body.style.cursor = ''; clearTimeout(cursorTimer); cursorTimer = setTimeout(() => document.body.style.cursor = 'none', 3000); };
-  document.addEventListener('mousemove', showCursor); showCursor();
 }
 
 /* ================= APP VOOR GASTEN ================= */
