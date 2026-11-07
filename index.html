@@ -6,7 +6,12 @@
 <meta name="theme-color" content="#15100c">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Feest 40">
 <title>Tijn &amp; Martijn 40 · Fotoapp</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -105,6 +110,17 @@
   .sheet input { width: 100%; font: inherit; font-size: 18px; padding: 15px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--bg); color: var(--text); outline: none; margin-bottom: 12px; }
   .sheet input:focus { border-color: var(--gold); }
 
+  /* ---------- Installeren ---------- */
+  .inst-head { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+  .inst-head img { width: 60px; height: 60px; border-radius: 14px; flex: none; box-shadow: 0 6px 18px -6px rgba(0,0,0,.6); }
+  .inst-head h3 { margin: 0; }
+  .steps { list-style: none; padding: 0; margin: 0 0 18px; display: grid; gap: 10px; }
+  .steps li { display: flex; align-items: center; gap: 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 11px 13px; font-size: 15px; line-height: 1.35; }
+  .steps .n { width: 26px; height: 26px; border-radius: 50%; background: var(--gold); color: #2a1a06; font-weight: 600; font-size: 14px; display: grid; place-items: center; flex: none; }
+  .steps svg { width: 20px; height: 20px; vertical-align: -4px; color: #4da3ff; }
+  .inst-btns { display: grid; gap: 8px; }
+  .btn-ghost { background: none; border: 0; color: var(--muted); padding: 12px; font-size: 15px; }
+
   /* ---------- Lightbox ---------- */
   .lightbox { position: fixed; inset: 0; z-index: 60; background: #000; display: none; flex-direction: column; }
   .lightbox.show { display: flex; }
@@ -149,7 +165,7 @@
     <div class="eyebrow">16 januari 2027 · Pallieter Prinsenbeek</div>
     <div class="forty" aria-hidden="true">40</div>
     <h1 class="names">Tijn <span class="amp">&amp;</span> Martijn</h1>
-    <div class="hello" id="hello" hidden>Hoi <b id="helloName"></b> · <button id="changeName" type="button">naam wijzigen</button></div>
+    <div class="hello" id="hello" hidden>Hoi <b id="helloName"></b> · <button id="changeName" type="button">naam wijzigen</button><span id="installLinkWrap" hidden> · <button id="installLink" type="button">app installeren</button></span></div>
   </header>
 
   <main class="wrap">
@@ -194,6 +210,24 @@
     <input id="nameInput" type="text" autocomplete="given-name" maxlength="40" placeholder="Je naam" enterkeyhint="done">
     <button class="btn btn-primary" type="submit" style="width:100%">Aan de slag</button>
   </form>
+</div>
+
+<!-- Installeren -->
+<div class="modal" id="installModal" role="dialog" aria-modal="true" aria-labelledby="instTitle">
+  <div class="sheet">
+    <div class="inst-head">
+      <img src="icon-192.png" alt="">
+      <div>
+        <h3 id="instTitle">Zet de app op je telefoon</h3>
+      </div>
+    </div>
+    <p id="instText">Dan staat hij tussen je apps en open je hem tijdens het feest met één tik.</p>
+    <ol class="steps" id="instSteps" hidden></ol>
+    <div class="inst-btns">
+      <button class="btn btn-primary" id="instGo" type="button">Installeren</button>
+      <button class="btn-ghost" id="instLater" type="button">Nu niet, gewoon verder</button>
+    </div>
+  </div>
 </div>
 
 <!-- Lightbox -->
@@ -254,6 +288,16 @@ function setImg(img, id, w) {
   img.onerror = () => { if (!img.dataset.alt) { img.dataset.alt = '1'; img.src = thumbAlt(id, w); } };
   img.dataset.alt = '';
   img.src = thumb(id, w);
+}
+
+/* ---------------- Installeerbaar maken ---------------- */
+let installEvt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault(); installEvt = e;
+  if (typeof window.__onInstallReady === 'function') window.__onInstallReady();
+});
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 
 /* ---------------- Fotolijst van de server ---------------- */
@@ -332,6 +376,83 @@ if (SCREEN) {
 if (!SCREEN) {
   if (!CONFIGURED) { $('notConfigured').hidden = false; $('btnCamera').disabled = true; $('btnPick').disabled = true; }
 
+  /* ---- app installeren ---- */
+  const UA = navigator.userAgent;
+  const IS_IOS = /iPhone|iPad|iPod/.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const IS_ANDROID = /Android/i.test(UA);
+  const IN_APP = /FBAN|FBAV|Instagram|Line\/|Snapchat|; wv\)/.test(UA);
+  const STANDALONE = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  const canOfferInstall = () => !STANDALONE && !store.get('tm40_installed', false) && (IS_IOS || IS_ANDROID || !!installEvt);
+  const SHARE_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>';
+  let instMode = null;
+
+  function setSteps(items) {
+    const ol = $('instSteps');
+    ol.innerHTML = items.map((t, i) => '<li><span class="n">' + (i + 1) + '</span><span>' + t + '</span></li>').join('');
+    ol.hidden = !items.length;
+  }
+  function showInstall() {
+    if (IN_APP) {
+      instMode = 'inapp';
+      $('instText').textContent = 'Je hebt deze pagina in een andere app geopend. Open hem eerst in je browser, dan kun je de app installeren:';
+      setSteps(IS_IOS
+        ? ['Tik op <b>•••</b> of het Deel-icoon ' + SHARE_SVG, 'Kies <b>Open in Safari</b>']
+        : ['Tik rechtsboven op <b>⋮</b>', 'Kies <b>Openen in Chrome</b> of <b>Openen in browser</b>']);
+      $('instGo').textContent = 'Begrepen';
+    } else if (installEvt) {
+      instMode = 'prompt';
+      $('instText').textContent = 'Dan staat hij tussen je apps en open je hem tijdens het feest met één tik.';
+      setSteps([]);
+      $('instGo').textContent = 'Installeren';
+    } else if (IS_IOS) {
+      instMode = 'ios';
+      $('instText').textContent = 'Dan staat hij tussen je apps en open je hem met één tik. Op een iPhone gaat dat zo:';
+      setSteps([
+        'Tik op het Deel-icoon ' + SHARE_SVG + '<br><small style="color:var(--muted)">Safari: onderaan · Chrome: rechtsboven</small>',
+        'Scroll omlaag en kies <b>Zet op beginscherm</b>',
+        'Tik rechtsboven op <b>Voeg toe</b>'
+      ]);
+      $('instGo').textContent = 'Begrepen';
+    } else {
+      instMode = 'android';
+      $('instText').textContent = 'Dan staat hij tussen je apps en open je hem met één tik:';
+      setSteps([
+        'Tik rechtsboven op <b>⋮</b> (menu)',
+        'Kies <b>App installeren</b> of <b>Toevoegen aan startscherm</b>',
+        'Bevestig met <b>Installeren</b><br><small style="color:var(--muted)">Zie je dit niet? Kies eerst <b>Openen in Chrome</b>.</small>'
+      ]);
+      $('instGo').textContent = 'Begrepen';
+    }
+    $('installModal').classList.add('show');
+  }
+  function closeInstall() { $('installModal').classList.remove('show'); instMode = null; }
+  function updateInstallLink() { $('installLinkWrap').hidden = !canOfferInstall(); }
+
+  $('instGo').addEventListener('click', async () => {
+    if (instMode === 'prompt' && installEvt) {
+      const evt = installEvt; installEvt = null;
+      try { evt.prompt(); const choice = await evt.userChoice; if (choice && choice.outcome === 'accepted') store.set('tm40_installed', true); } catch (e) {}
+    }
+    store.set('tm40_install_seen', true);
+    closeInstall(); updateInstallLink();
+  });
+  $('instLater').addEventListener('click', () => { store.set('tm40_install_seen', true); closeInstall(); });
+  $('installLink').addEventListener('click', showInstall);
+  window.__onInstallReady = () => {
+    updateInstallLink();
+    if (instMode === 'android') showInstall();   // handmatige uitleg vervangen door de echte knop
+  };
+  window.addEventListener('appinstalled', () => { store.set('tm40_installed', true); closeInstall(); updateInstallLink(); });
+
+  function maybeShowInstall() {
+    updateInstallLink();
+    if (!canOfferInstall() || store.get('tm40_install_seen', false)) return;
+    // Android geeft het installatie-signaal soms pas na een paar seconden
+    setTimeout(() => {
+      if (!$('nameModal').classList.contains('show') && !$('lightbox').classList.contains('show') && canOfferInstall()) showInstall();
+    }, IS_ANDROID && !installEvt ? 2500 : 600);
+  }
+
   /* ---- naam ---- */
   let guestName = store.get('tm40_name', '');
   function showName() {
@@ -350,10 +471,11 @@ if (!SCREEN) {
     $('nameModal').classList.remove('show');
     showName();
     if (pendingPick) { const f = pendingPick; pendingPick = null; f(); }
+    else maybeShowInstall();
   });
   $('changeName').addEventListener('click', askName);
   showName();
-  if (!guestName) askName();
+  if (!guestName) askName(); else maybeShowInstall();
 
   /* ---- foto kiezen / maken ---- */
   let pendingPick = null;
