@@ -597,17 +597,14 @@ if (SCREEN) {
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
           const st = ctx.getCastState && ctx.getCastState();
-          if (st === cast.framework.CastState.NO_DEVICES_AVAILABLE) {
-            castMsg('Geen Chromecast gevonden. Zit dit apparaat op dezelfde wifi als de Chromecast?');
-            setTimeout(() => castMsg(''), 7000);
-            return;
-          }
+          const noDevices = st === cast.framework.CastState.NO_DEVICES_AVAILABLE;
+          const hint = 'Geen Chromecast gevonden die de Fotomuur kent. Zit je op dezelfde wifi? Herstart anders de Chromecast (stekker er even uit) en probeer het opnieuw.';
           ctx.requestSession().catch((err) => {
             const code = String(err && (err.code || err) || '');
-            if (code === 'cancel') return;
-            if (code === 'receiver_unavailable') castMsg('De Fotomuur is (nog) niet beschikbaar op deze Chromecast. Wacht 15 minuten na publiceren en herstart de Chromecast.');
+            if (code === 'cancel' && !noDevices) return;
+            if (code === 'cancel' || code === 'receiver_unavailable') castMsg(hint);
             else castMsg('Casten lukte niet (' + code + '). Probeer het opnieuw.');
-            setTimeout(() => castMsg(''), 9000);
+            setTimeout(() => castMsg(''), 10000);
           });
         });
         if (cast.framework.CastContextEventType.CAST_STATE_CHANGED) ctx.addEventListener(cast.framework.CastContextEventType.CAST_STATE_CHANGED, updBtn);
