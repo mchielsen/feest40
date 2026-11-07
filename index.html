@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#15100c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Tijn &amp; Martijn 40 · Fotoapp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #15100c;
+    --panel: #211912;
+    --panel-2: #2b2118;
+    --line: rgba(246, 236, 217, .12);
+    --text: #f6ecd9;
+    --muted: #b8a68c;
+    --gold: #f0b441;
+    --gold-2: #ffd27a;
+    --ok: #8fd19e;
+    --err: #ff8a7a;
+    --radius: 18px;
+    --display: "Fraunces", Georgia, "Times New Roman", serif;
+    --body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--body); -webkit-font-smoothing: antialiased; }
+  body { min-height: 100vh; padding: env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 24px); }
+  button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 0 18px; }
+
+  /* ---------- Hero ---------- */
+  .hero { position: relative; text-align: center; padding: 34px 0 22px; overflow: hidden; }
+  .hero::before {
+    content: ""; position: absolute; inset: -40% -20% auto; height: 120%;
+    background: radial-gradient(closest-side, rgba(240, 180, 65, .22), transparent 70%);
+    pointer-events: none;
+  }
+  .eyebrow { position: relative; font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+  .forty {
+    position: relative; font-family: var(--display); font-style: italic; font-weight: 800;
+    font-size: clamp(120px, 38vw, 200px); line-height: .82; margin: 10px 0 2px;
+    background: linear-gradient(180deg, var(--gold-2) 10%, var(--gold) 55%, #b97a1c 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    letter-spacing: -.04em;
+  }
+  .names { position: relative; font-family: var(--display); font-weight: 600; font-size: clamp(26px, 7vw, 36px); margin: 0; }
+  .names .amp { color: var(--gold); font-style: italic; }
+  .hello { position: relative; margin-top: 12px; color: var(--muted); font-size: 15px; }
+  .hello button { background: none; border: 0; padding: 0; color: var(--gold); text-decoration: underline; text-underline-offset: 3px; font-size: 14px; }
+
+  /* ---------- Actions ---------- */
+  .actions { display: grid; gap: 10px; margin: 8px 0 14px; }
+  .btn {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    border-radius: var(--radius); border: 1px solid var(--line); padding: 18px 20px;
+    font-weight: 600; font-size: 17px; background: var(--panel); transition: transform .08s ease, opacity .2s;
+  }
+  .btn:active { transform: scale(.98); }
+  .btn svg { width: 24px; height: 24px; flex: none; }
+  .btn-primary { background: linear-gradient(180deg, var(--gold-2), var(--gold)); color: #2a1a06; border: 0; font-size: 19px; padding: 22px 20px; box-shadow: 0 10px 30px -12px rgba(240, 180, 65, .6); }
+  .btn[disabled] { opacity: .45; pointer-events: none; }
+  input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+  /* ---------- Status ---------- */
+  .status { display: none; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line); font-size: 14px; margin-bottom: 16px; }
+  .status.show { display: flex; }
+  .status .txt { flex: 1; line-height: 1.35; }
+  .status.ok { border-color: rgba(143, 209, 158, .35); }
+  .status.err { border-color: rgba(255, 138, 122, .45); }
+  .status .retry { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 7px 12px; font-size: 13px; font-weight: 600; }
+  .spinner { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(240, 180, 65, .25); border-top-color: var(--gold); animation: spin .8s linear infinite; flex: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .ok .dot { background: var(--ok); } .err .dot { background: var(--err); }
+  .notice { padding: 14px 16px; border-radius: 14px; background: #3a2414; border: 1px solid rgba(240, 180, 65, .4); font-size: 14px; line-height: 1.45; margin-bottom: 16px; }
+  .notice code { background: rgba(0,0,0,.3); padding: 1px 5px; border-radius: 5px; }
+
+  /* ---------- Fotomuur ---------- */
+  .wall-head { display: flex; align-items: baseline; justify-content: space-between; margin: 22px 0 10px; }
+  .wall-head h2 { font-family: var(--display); font-weight: 600; font-size: 24px; margin: 0; }
+  .wall-head .count { color: var(--muted); font-size: 14px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; border-radius: 12px; overflow: hidden; }
+  @media (min-width: 560px) { .grid { grid-template-columns: repeat(4, 1fr); } }
+  .tile { position: relative; aspect-ratio: 1; background: var(--panel); border: 0; padding: 0; overflow: hidden; }
+  .tile img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0; transition: opacity .35s; }
+  .tile img.loaded { opacity: 1; }
+  .tile .who { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 6px 5px; font-size: 11px; text-align: left; color: #fff; background: linear-gradient(transparent, rgba(0,0,0,.65)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile.pending::after { content: ""; position: absolute; inset: 0; background: rgba(21, 16, 12, .45); }
+  .tile.pending .spinner, .tile.failed .badge { position: absolute; top: 8px; right: 8px; z-index: 2; }
+  .tile.failed .badge { background: var(--err); color: #2a0b06; font-size: 11px; font-weight: 600; border-radius: 8px; padding: 2px 6px; }
+  .empty { grid-column: 1 / -1; text-align: center; padding: 40px 16px; color: var(--muted); background: var(--panel); font-size: 15px; line-height: 1.5; }
+  .foot { text-align: center; color: var(--muted); font-size: 12px; margin-top: 26px; }
+
+  /* ---------- Naam-dialoog ---------- */
+  .modal { position: fixed; inset: 0; z-index: 50; display: none; align-items: flex-end; justify-content: center; background: rgba(10, 7, 5, .7); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  .modal.show { display: flex; }
+  .sheet { width: 100%; max-width: 520px; background: var(--panel); border: 1px solid var(--line); border-radius: 24px 24px 0 0; padding: 26px 22px calc(env(safe-area-inset-bottom) + 22px); }
+  @media (min-width: 560px) { .modal { align-items: center; } .sheet { border-radius: 24px; } }
+  .sheet h3 { font-family: var(--display); font-weight: 600; font-size: 26px; margin: 0 0 6px; }
+  .sheet p { color: var(--muted); margin: 0 0 18px; font-size: 15px; line-height: 1.45; }
+  .sheet input { width: 100%; font: inherit; font-size: 18px; padding: 15px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--bg); color: var(--text); outline: none; margin-bottom: 12px; }
+  .sheet input:focus { border-color: var(--gold); }
+
+  /* ---------- Lightbox ---------- */
+  .lightbox { position: fixed; inset: 0; z-index: 60; background: #000; display: none; flex-direction: column; }
+  .lightbox.show { display: flex; }
+  .lb-img { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; touch-action: pan-y; }
+  .lb-img img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .lb-bar { display: flex; align-items: center; gap: 10px; padding: 12px 16px calc(env(safe-area-inset-bottom) + 12px); background: #0b0806; }
+  .lb-cap { flex: 1; font-size: 14px; color: var(--muted); }
+  .lb-cap b { color: var(--text); font-weight: 600; }
+  .icon-btn { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); display: grid; place-items: center; }
+  .icon-btn svg { width: 20px; height: 20px; }
+  .lb-close { position: absolute; top: calc(env(safe-area-inset-top) + 12px); right: 12px; z-index: 2; }
+
+  /* ---------- Schermmodus (tv in het café) ---------- */
+  .screen { display: none; }
+  body.scherm { padding: 0; overflow: hidden; }
+  body.scherm .app { display: none; }
+  body.scherm .screen { display: grid; grid-template-columns: 1fr 300px; height: 100vh; }
+  .stage { position: relative; background: #000; overflow: hidden; }
+  .stage img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: opacity 1.2s ease; }
+  .stage img.on { opacity: 1; }
+  .stage .bg { object-fit: cover; filter: blur(40px) brightness(.45); transform: scale(1.15); }
+  .stage .cap { position: absolute; left: 28px; bottom: 26px; z-index: 3; font-size: 22px; font-weight: 600; background: rgba(0,0,0,.45); padding: 8px 16px; border-radius: 999px; opacity: 0; transition: opacity .6s; }
+  .stage .cap.on { opacity: 1; }
+  .stage .new { position: absolute; top: 24px; left: 28px; z-index: 3; background: var(--gold); color: #2a1a06; font-weight: 600; padding: 6px 14px; border-radius: 999px; font-size: 16px; opacity: 0; transition: opacity .4s; }
+  .stage .new.on { opacity: 1; }
+  .stage .wait { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 24px; text-align: center; padding: 40px; }
+  .side { background: var(--panel); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 28px; gap: 10px; border-left: 1px solid var(--line); }
+  .side .forty { font-size: 120px; }
+  .side .names { font-size: 28px; }
+  .side .qr { background: #fff; padding: 12px; border-radius: 16px; width: 220px; margin-top: 18px; }
+  .side .qr img { width: 100%; display: block; image-rendering: pixelated; }
+  .side .scan { font-size: 18px; font-weight: 600; margin-top: 8px; }
+  .side .total { color: var(--muted); font-size: 16px; }
+  .fs-hint { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,.6); padding: 6px 14px; border-radius: 999px; font-size: 13px; color: var(--muted); z-index: 5; transition: opacity 1s; }
+</style>
+</head>
+<body>
+
+<!-- ======================= APP VOOR GASTEN ======================= -->
+<div class="app">
+  <header class="hero">
+    <div class="eyebrow">16 januari 2027 · Pallieter Prinsenbeek</div>
+    <div class="forty" aria-hidden="true">40</div>
+    <h1 class="names">Tijn <span class="amp">&amp;</span> Martijn</h1>
+    <div class="hello" id="hello" hidden>Hoi <b id="helloName"></b> · <button id="changeName" type="button">naam wijzigen</button></div>
+  </header>
+
+  <main class="wrap">
+    <div class="notice" id="notConfigured" hidden>
+      Deze app is nog niet gekoppeld aan Google Drive. Zet de web-app-URL van het Apps Script bij <code>API_URL</code> bovenin het script van <code>index.html</code>.
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" id="btnCamera" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.8"/></svg>
+        Maak een foto
+      </button>
+      <button class="btn" id="btnPick" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>
+        Kies foto's van je telefoon
+      </button>
+    </div>
+    <input type="file" id="inCamera" accept="image/*" capture="environment">
+    <input type="file" id="inPick" accept="image/*" multiple>
+
+    <div class="status" id="status" role="status" aria-live="polite">
+      <div class="spinner" id="stSpin"></div><div class="dot" id="stDot"></div>
+      <div class="txt" id="stTxt"></div>
+      <button class="retry" id="stRetry" type="button" hidden>Opnieuw</button>
+    </div>
+
+    <div class="wall-head">
+      <h2>Fotomuur</h2>
+      <div class="count" id="count"></div>
+    </div>
+    <div class="grid" id="grid"></div>
+
+    <p class="foot">Alle foto's komen centraal bij Tijn en Martijn terecht. Bedankt voor het delen!</p>
+  </main>
+</div>
+
+<!-- Naam-dialoog -->
+<div class="modal" id="nameModal" role="dialog" aria-modal="true" aria-labelledby="nameTitle">
+  <form class="sheet" id="nameForm">
+    <h3 id="nameTitle">Welkom op het feest!</h3>
+    <p>Wat is je naam? Dan weten Tijn en Martijn wie welke foto heeft gemaakt.</p>
+    <input id="nameInput" type="text" autocomplete="given-name" maxlength="40" placeholder="Je naam" enterkeyhint="done">
+    <button class="btn btn-primary" type="submit" style="width:100%">Aan de slag</button>
+  </form>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true">
+  <button class="icon-btn lb-close" id="lbClose" type="button" aria-label="Sluiten">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+  </button>
+  <div class="lb-img" id="lbStage"><img id="lbImg" alt=""></div>
+  <div class="lb-bar">
+    <button class="icon-btn" id="lbPrev" type="button" aria-label="Vorige"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+    <div class="lb-cap" id="lbCap"></div>
+    <button class="icon-btn" id="lbNext" type="button" aria-label="Volgende"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+  </div>
+</div>
+
+<!-- ======================= SCHERMMODUS (?scherm) ======================= -->
+<div class="screen" id="screen">
+  <div class="stage" id="stage">
+    <img class="bg" id="bgA" alt=""><img class="bg" id="bgB" alt="">
+    <img id="imgA" alt=""><img id="imgB" alt="">
+    <div class="new" id="newTag">Nieuw!</div>
+    <div class="cap" id="scrCap"></div>
+    <div class="wait" id="scrWait">Nog geen foto's… scan de QR-code en maak de eerste!</div>
+  </div>
+  <aside class="side">
+    <div class="forty" aria-hidden="true">40</div>
+    <div class="names">Tijn <span class="amp">&amp;</span> Martijn</div>
+    <div class="qr"><img src="qr.png" alt="QR-code naar de fotoapp"></div>
+    <div class="scan">Scan &amp; deel jouw foto's</div>
+    <div class="total" id="scrTotal"></div>
+  </aside>
+</div>
+
+<script>
+/* ===================== INSTELLINGEN ===================== */
+// Plak hier de web-app-URL van je Google Apps Script (eindigt op /exec):
+const API_URL = 'https://script.google.com/macros/s/AKfycbyIjHKVvrcYVnOagMdk1eEDWni9JWppqMSyb3kqj06cDKDmzpIf3qmHaSnvG-oKZjZUsQ/exec';
+// Moet gelijk zijn aan APP_KEY in Code.gs:
+const APP_KEY = 'TM40-pallieter';
+/* ======================================================== */
+
+const CONFIGURED = /^https:\/\/script\.google\.com\/.+\/exec$/.test(API_URL);
+const MAX_SIDE = 2560;          // langste zijde na verkleinen (scherp genoeg voor afdrukken)
+const JPEG_QUALITY = 0.86;
+const PARALLEL = 2;             // gelijktijdige uploads per telefoon
+const POLL_MS = 15000;          // fotomuur verversen
+const SCREEN = new URLSearchParams(location.search).has('scherm');
+
+const $ = (id) => document.getElementById(id);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+const thumb = (id, w) => 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w' + w;
+const thumbAlt = (id, w) => 'https://lh3.googleusercontent.com/d/' + encodeURIComponent(id) + '=w' + w;
+const timeStr = (t) => { try { return new Date(t).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } };
+function setImg(img, id, w) {
+  img.onerror = () => { if (!img.dataset.alt) { img.dataset.alt = '1'; img.src = thumbAlt(id, w); } };
+  img.dataset.alt = '';
+  img.src = thumb(id, w);
+}
+
+/* ---------------- Fotolijst van de server ---------------- */
+let serverPhotos = [];       // [{id, name, t}] nieuwste eerst
+let serverTotal = 0;
+async function fetchList() {
+  if (!CONFIGURED) return null;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 15000);
+  try {
+    const r = await fetch(API_URL + '?action=list&key=' + encodeURIComponent(APP_KEY) + '&_=' + Date.now(), { signal: ctrl.signal });
+    const j = await r.json();
+    if (j && j.ok) { serverPhotos = j.photos || []; serverTotal = j.total || serverPhotos.length; return serverPhotos; }
+  } catch (e) { /* volgende ronde opnieuw */ }
+  finally { clearTimeout(timer); }
+  return null;
+}
+
+/* ================= SCHERMMODUS ================= */
+if (SCREEN) {
+  document.body.classList.add('scherm');
+  const layers = [[$('imgA'), $('bgA')], [$('imgB'), $('bgB')]];
+  let cur = 0, shown = new Set(), firstLoad = true, newQueue = [], cycle = [], timer = null;
+
+  const hint = document.createElement('div');
+  hint.className = 'fs-hint'; hint.textContent = 'Klik ergens voor volledig scherm';
+  document.body.appendChild(hint);
+  setTimeout(() => hint.style.opacity = 0, 6000);
+  document.addEventListener('click', () => { document.documentElement.requestFullscreen && document.documentElement.requestFullscreen().catch(() => {}); hint.remove(); });
+
+  async function refresh() {
+    const list = await fetchList();
+    if (!list) return;
+    $('scrTotal').textContent = serverTotal === 1 ? '1 foto gedeeld' : serverTotal + " foto's gedeeld";
+    for (const p of list.slice().reverse()) {
+      if (!shown.has(p.id)) { shown.add(p.id); if (!firstLoad) newQueue.push(p); }
+    }
+    firstLoad = false;
+    $('scrWait').style.display = list.length ? 'none' : '';
+    if (list.length && !timer) next();
+  }
+  function pick() {
+    if (newQueue.length) return { p: newQueue.shift(), isNew: true };
+    if (!cycle.length) cycle = serverPhotos.slice().sort(() => Math.random() - .5);
+    return { p: cycle.shift(), isNew: false };
+  }
+  function next() {
+    clearTimeout(timer);
+    const item = pick();
+    if (!item.p) { timer = null; return; }
+    const nxt = 1 - cur;
+    const [img, bg] = layers[nxt];
+    const pre = new Image();
+    const show = () => {
+      img.src = pre.src; bg.src = pre.src;
+      layers[nxt].forEach(el => el.classList.add('on'));
+      layers[cur].forEach(el => el.classList.remove('on'));
+      cur = nxt;
+      $('scrCap').textContent = '📷 ' + (item.p.name || 'Gast');
+      $('scrCap').classList.add('on');
+      $('newTag').classList.toggle('on', item.isNew);
+      timer = setTimeout(next, item.isNew ? 8000 : 6500);
+    };
+    pre.onload = show;
+    pre.onerror = () => {
+      if (!pre.dataset.alt) { pre.dataset.alt = '1'; pre.src = thumbAlt(item.p.id, 1920); }
+      else timer = setTimeout(next, 500);
+    };
+    pre.src = thumb(item.p.id, 1920);
+  }
+  refresh();
+  setInterval(refresh, 8000);
+}
+
+/* ================= APP VOOR GASTEN ================= */
+if (!SCREEN) {
+  if (!CONFIGURED) { $('notConfigured').hidden = false; $('btnCamera').disabled = true; $('btnPick').disabled = true; }
+
+  /* ---- naam ---- */
+  let guestName = store.get('tm40_name', '');
+  function showName() {
+    $('hello').hidden = !guestName;
+    $('helloName').textContent = guestName;
+  }
+  function askName() {
+    $('nameInput').value = guestName;
+    $('nameModal').classList.add('show');
+    setTimeout(() => $('nameInput').focus(), 50);
+  }
+  $('nameForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    guestName = $('nameInput').value.trim().slice(0, 40) || 'Gast';
+    store.set('tm40_name', guestName);
+    $('nameModal').classList.remove('show');
+    showName();
+    if (pendingPick) { const f = pendingPick; pendingPick = null; f(); }
+  });
+  $('changeName').addEventListener('click', askName);
+  showName();
+  if (!guestName) askName();
+
+  /* ---- foto kiezen / maken ---- */
+  let pendingPick = null;
+  function open(input) {
+    const go = () => { input.value = ''; input.click(); };
+    if (!guestName) { pendingPick = go; askName(); } else go();
+  }
+  $('btnCamera').addEventListener('click', () => open($('inCamera')));
+  $('btnPick').addEventListener('click', () => open($('inPick')));
+  $('inCamera').addEventListener('change', (e) => addFiles(e.target.files));
+  $('inPick').addEventListener('change', (e) => addFiles(e.target.files));
+
+  /* ---- wachtrij in IndexedDB (overleeft wegvallend wifi of afsluiten) ---- */
+  const idb = {
+    db: null,
+    open() {
+      if (this.db) return Promise.resolve(this.db);
+      return new Promise((res) => {
+        try {
+          const r = indexedDB.open('tm40-fotoapp', 1);
+          r.onupgradeneeded = () => r.result.createObjectStore('queue', { keyPath: 'key' });
+          r.onsuccess = () => { this.db = r.result; res(this.db); };
+          r.onerror = () => res(null);
+        } catch (e) { res(null); }
+      });
+    },
+    async tx(mode, fn) {
+      const db = await this.open(); if (!db) return null;
+      return new Promise((res) => {
+        try {
+          const t = db.transaction('queue', mode); const s = t.objectStore('queue');
+          const r = fn(s); t.oncomplete = () => res(r && r.result); t.onerror = () => res(null);
+        } catch (e) { res(null); }
+      });
+    },
+    put(item) { return this.tx('readwrite', s => s.put(item)); },
+    del(key) { return this.tx('readwrite', s => s.delete(key)); },
+    all() { return this.tx('readonly', s => s.getAll()); }
+  };
+
+  /* ---- lokale items: [{key, blob, url, name, status:'waiting'|'busy'|'done'|'failed', tries, serverId}] ---- */
+  const local = [];
+  let active = 0;
+  let uploadedCount = store.get('tm40_count', 0);
+
+  async function compress(file) {
+    try {
+      let src;
+      try { src = await createImageBitmap(file, { imageOrientation: 'from-image' }); }
+      catch (e) {
+        src = new Image(); src.src = URL.createObjectURL(file); await src.decode();
+      }
+      const w = src.width, h = src.height;
+      const s = Math.min(1, MAX_SIDE / Math.max(w, h));
+      const c = document.createElement('canvas');
+      c.width = Math.round(w * s); c.height = Math.round(h * s);
+      c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+      if (src.close) src.close();
+      const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', JPEG_QUALITY));
+      if (blob && blob.size > 1000) return blob;
+    } catch (e) { /* val terug op origineel */ }
+    if (file.size <= 18 * 1024 * 1024) return file;
+    throw new Error('te groot');
+  }
+
+  async function addFiles(fileList) {
+    const files = Array.from(fileList || []).filter(f => /^image\//.test(f.type) || /\.(jpe?g|png|heic|heif|webp)$/i.test(f.name));
+    if (!files.length) return;
+    setStatus();
+    for (const f of files) {
+      const key = Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+      const item = { key, name: guestName || 'Gast', status: 'prep', tries: 0, created: Date.now() };
+      local.unshift(item); render(); setStatus();
+      try {
+        item.blob = await compress(f);
+        item.url = URL.createObjectURL(item.blob);
+        item.status = 'waiting';
+        idb.put({ key, blob: item.blob, name: item.name, created: item.created });
+      } catch (e) {
+        item.status = 'failed'; item.error = 'Deze foto kon niet worden gelezen';
+      }
+      render(); pump();
+    }
+  }
+
+  function toBase64(blob) {
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(String(r.result).split(',')[1]);
+      r.onerror = rej;
+      r.readAsDataURL(blob);
+    });
+  }
+
+  async function upload(item) {
+    item.status = 'busy'; active++; render(); setStatus();
+    try {
+      const data = await toBase64(item.blob);
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 90000);
+      const r = await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ key: APP_KEY, name: item.name, mime: item.blob.type || 'image/jpeg', data }),
+        signal: ctrl.signal
+      });
+      clearTimeout(timer);
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || 'mislukt');
+      item.status = 'done'; item.serverId = j.id;
+      uploadedCount++; store.set('tm40_count', uploadedCount);
+      idb.del(item.key);
+      setTimeout(refreshWall, 1500);
+    } catch (e) {
+      item.tries++;
+      if (item.tries < 4 && navigator.onLine !== false) {
+        item.status = 'waiting';
+        item.notBefore = Date.now() + [0, 2000, 6000, 15000][item.tries];
+        setTimeout(pump, [0, 2000, 6000, 15000][item.tries] + 50);
+      } else {
+        item.status = 'failed';
+      }
+    } finally {
+      active--; render(); setStatus(); pump();
+    }
+  }
+
+  function pump() {
+    if (!CONFIGURED) return;
+    const now = Date.now();
+    for (const item of local.slice().reverse()) {   // oudste eerst
+      if (active >= PARALLEL) break;
+      if (item.status === 'waiting' && (!item.notBefore || item.notBefore <= now)) upload(item);
+    }
+  }
+
+  function retryFailed() {
+    for (const it of local) if (it.status === 'failed' && it.blob) { it.status = 'waiting'; it.tries = 0; it.notBefore = 0; }
+    setStatus(); pump();
+  }
+  $('stRetry').addEventListener('click', retryFailed);
+  window.addEventListener('online', retryFailed);
+
+  /* ---- status ---- */
+  let okTimer = null;
+  function setStatus() {
+    const busy = local.filter(i => ['prep', 'waiting', 'busy'].includes(i.status)).length;
+    const failed = local.filter(i => i.status === 'failed').length;
+    const el = $('status');
+    el.classList.remove('ok', 'err');
+    $('stRetry').hidden = true;
+    $('stSpin').style.display = 'none'; $('stDot').style.display = 'none';
+    clearTimeout(okTimer);
+    if (busy) {
+      el.classList.add('show'); $('stSpin').style.display = '';
+      $('stTxt').textContent = busy === 1 ? 'Foto wordt verstuurd… je kunt gewoon verder.' : busy + " foto's worden verstuurd… je kunt gewoon verder.";
+    } else if (failed) {
+      el.classList.add('show', 'err'); $('stDot').style.display = '';
+      $('stTxt').textContent = (failed === 1 ? '1 foto is' : failed + " foto's zijn") + ' nog niet verstuurd. Check je internet of wifi.';
+      $('stRetry').hidden = !local.some(i => i.status === 'failed' && i.blob);
+    } else if (local.some(i => i.status === 'done')) {
+      el.classList.add('show', 'ok'); $('stDot').style.display = '';
+      $('stTxt').textContent = 'Verstuurd! Je hebt ' + (uploadedCount === 1 ? '1 foto' : uploadedCount + " foto's") + ' gedeeld. Dank je!';
+      okTimer = setTimeout(() => el.classList.remove('show'), 6000);
+    } else {
+      el.classList.remove('show');
+    }
+  }
+
+  /* ---- fotomuur ---- */
+  const tiles = new Map();
+  let viewList = [];
+  function makeTile(key) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'tile';
+    const img = document.createElement('img');
+    img.loading = 'lazy'; img.alt = '';
+    img.addEventListener('load', () => img.classList.add('loaded'));
+    const who = document.createElement('div'); who.className = 'who';
+    b.append(img, who);
+    b.addEventListener('click', () => { const i = viewList.findIndex(v => v.key === key); if (i >= 0) openLb(i); });
+    tiles.set(key, b);
+    return b;
+  }
+  function render() {
+    const serverIds = new Set(serverPhotos.map(p => p.id));
+    // lokale foto's die al op de muur staan: opruimen
+    for (let i = local.length - 1; i >= 0; i--) {
+      const it = local[i];
+      if (it.status === 'done' && serverIds.has(it.serverId)) {
+        const t = tiles.get(it.key); if (t) { t.remove(); tiles.delete(it.key); }
+        if (it.url) URL.revokeObjectURL(it.url);
+        local.splice(i, 1);
+      }
+    }
+    viewList = [
+      ...local.filter(it => it.url || it.status === 'prep' || it.status === 'failed').map(it => ({ key: it.key, local: it })),
+      ...serverPhotos.map(p => ({ key: p.id, p }))
+    ];
+    const els = viewList.map(v => {
+      const t = tiles.get(v.key) || makeTile(v.key);
+      const img = t.firstChild, who = t.lastChild;
+      if (v.local) {
+        const it = v.local;
+        if (it.url && img.getAttribute('src') !== it.url) img.src = it.url;
+        who.textContent = it.status === 'done' ? 'Verstuurd ✓' : it.status === 'failed' ? (it.error || 'Niet verstuurd') : 'Versturen…';
+        t.classList.toggle('pending', ['prep', 'waiting', 'busy'].includes(it.status));
+        t.classList.toggle('failed', it.status === 'failed');
+        let sp = t.querySelector('.spinner'), bd = t.querySelector('.badge');
+        if (t.classList.contains('pending') && !sp) { sp = document.createElement('div'); sp.className = 'spinner'; t.appendChild(sp); }
+        if (!t.classList.contains('pending') && sp) sp.remove();
+        if (t.classList.contains('failed') && !bd) { bd = document.createElement('div'); bd.className = 'badge'; bd.textContent = '!'; t.appendChild(bd); }
+        if (!t.classList.contains('failed') && bd) bd.remove();
+      } else {
+        if (!img.dataset.id) { img.dataset.id = v.p.id; setImg(img, v.p.id, 480); }
+        who.textContent = v.p.name || 'Gast';
+      }
+      return t;
+    });
+    const grid = $('grid');
+    if (!els.length) {
+      grid.innerHTML = '<div class="empty">' + (CONFIGURED ? "Nog geen foto's.<br>Maak jij de eerste?" : 'De fotomuur verschijnt zodra de app gekoppeld is.') + '</div>';
+    } else {
+      // alleen herordenen als het nodig is
+      const same = grid.children.length === els.length && els.every((e, i) => grid.children[i] === e);
+      if (!same) grid.replaceChildren(...els);
+    }
+    for (const [k, t] of tiles) if (!viewList.some(v => v.key === k)) { t.remove(); tiles.delete(k); }
+    $('count').textContent = serverTotal ? (serverTotal === 1 ? '1 foto' : serverTotal + " foto's") : '';
+  }
+
+  async function refreshWall() {
+    const r = await fetchList();
+    if (r) render();
+  }
+
+  /* ---- lightbox ---- */
+  let lbIndex = 0;
+  function openLb(i) {
+    lbIndex = i; showLb(); $('lightbox').classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeLb() { $('lightbox').classList.remove('show'); document.body.style.overflow = ''; $('lbImg').removeAttribute('src'); }
+  function showLb() {
+    const v = viewList[lbIndex]; if (!v) return closeLb();
+    const img = $('lbImg');
+    if (v.local) {
+      img.onerror = null; img.src = v.local.url || '';
+      $('lbCap').innerHTML = '';
+      const b = document.createElement('b'); b.textContent = 'Jouw foto';
+      $('lbCap').append(b, document.createTextNode(' · ' + (v.local.status === 'done' ? 'verstuurd' : v.local.status === 'failed' ? 'nog niet verstuurd' : 'wordt verstuurd')));
+    } else {
+      setImg(img, v.p.id, 1600);
+      $('lbCap').innerHTML = '';
+      const b = document.createElement('b'); b.textContent = v.p.name || 'Gast';
+      $('lbCap').append(b, document.createTextNode(' · ' + timeStr(v.p.t)));
+    }
+    $('lbPrev').disabled = lbIndex <= 0; $('lbNext').disabled = lbIndex >= viewList.length - 1;
+    $('lbPrev').style.opacity = lbIndex <= 0 ? .3 : 1; $('lbNext').style.opacity = lbIndex >= viewList.length - 1 ? .3 : 1;
+  }
+  const step = (d) => { const n = lbIndex + d; if (n >= 0 && n < viewList.length) { lbIndex = n; showLb(); } };
+  $('lbClose').addEventListener('click', closeLb);
+  $('lbPrev').addEventListener('click', () => step(-1));
+  $('lbNext').addEventListener('click', () => step(1));
+  document.addEventListener('keydown', (e) => {
+    if (!$('lightbox').classList.contains('show')) return;
+    if (e.key === 'Escape') closeLb(); if (e.key === 'ArrowLeft') step(-1); if (e.key === 'ArrowRight') step(1);
+  });
+  let tx = null;
+  $('lbStage').addEventListener('touchstart', (e) => { tx = e.touches[0].clientX; }, { passive: true });
+  $('lbStage').addEventListener('touchend', (e) => {
+    if (tx === null) return; const dx = e.changedTouches[0].clientX - tx; tx = null;
+    if (Math.abs(dx) > 50) step(dx < 0 ? 1 : -1);
+  });
+
+  /* ---- opstarten ---- */
+  (async () => {
+    render();
+    // foto's die nog niet verstuurd waren (bijv. app afgesloten) alsnog versturen
+    const pending = (await idb.all()) || [];
+    for (const p of pending.sort((a, b) => b.created - a.created)) {
+      local.push({ key: p.key, blob: p.blob, url: URL.createObjectURL(p.blob), name: p.name, created: p.created, status: 'waiting', tries: 0 });
+    }
+    render(); setStatus(); pump();
+    await refreshWall();
+    setInterval(() => { if (!document.hidden) refreshWall(); }, POLL_MS);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) { refreshWall(); pump(); } });
+  })();
+}
+</script>
+</body>
+</html>
