@@ -188,6 +188,20 @@
   .side .qr img { width: 100%; display: block; image-rendering: pixelated; }
   .side .scan { font-size: 18px; font-weight: 600; margin-top: 8px; }
   .side .total { color: var(--muted); font-size: 16px; }
+  @media (min-width: 1500px) {
+    body.scherm .screen { grid-template-columns: 1fr 440px; }
+    body.scherm .bubbles { width: 440px; }
+    .side .portrait { width: 170px; height: 170px; }
+    .side .names { font-size: 44px; }
+    .side .sub { font-size: 15px; }
+    .side .forty { font-size: 130px; }
+    .side .mug { width: 64px; height: 76px; }
+    .side .qr { width: 280px; margin-top: 16px; }
+    .side .scan { font-size: 24px; }
+    .side .total { font-size: 19px; }
+    .stage .cap { font-size: 28px; }
+    .stage .new { font-size: 22px; }
+  }
   .fs-hint { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,.6); padding: 6px 14px; border-radius: 999px; font-size: 13px; color: var(--muted); z-index: 5; transition: opacity 1s; }
 </style>
 </head>
