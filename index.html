@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
+<!-- Let op: tv/index.html wordt uit dit bestand gemaakt met tools/maak-tv.py -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f3a33">
@@ -12,7 +13,7 @@
 <script>
   // tv-modus krijgt een eigen installeerbare app ("Fotomuur") die direct in de tv-weergave opent
   (function () {
-    var tv = /[?&]scherm/.test(location.search);
+    var tv = window.FORCE_SCREEN === true || /[?&]scherm/.test(location.search);
     var l = document.createElement('link'); l.rel = 'manifest';
     l.href = tv ? 'manifest-tv.webmanifest' : 'manifest.webmanifest';
     document.head.appendChild(l);
@@ -377,7 +378,7 @@ const MAX_SIDE = 2560;          // langste zijde na verkleinen (scherp genoeg vo
 const JPEG_QUALITY = 0.86;
 const PARALLEL = 2;             // gelijktijdige uploads per telefoon
 const POLL_MS = 15000;          // fotomuur verversen
-const SCREEN = new URLSearchParams(location.search).has('scherm');
+const SCREEN = window.FORCE_SCREEN === true || new URLSearchParams(location.search).has('scherm');
 
 const $ = (id) => document.getElementById(id);
 const store = {

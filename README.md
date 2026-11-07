@@ -24,7 +24,7 @@ Verwijder de regel in de Sheet **Feest 40 Tijn & Martijn - fotologboek** (en eve
 ## Fotomuur op de tv (tablet + Chromecast)
 
 1. Open op de Android-tablet in Chrome: https://mchielsen.github.io/feest40/tv
-2. Tik op **App installeren** (rechtsboven). De app "Fotomuur" opent voortaan direct de tv-weergave.
+2. Tik op **App installeren** (rechtsboven). De app "Fotomuur" (icoon met tv-symbool) staat los van de gewone fotoapp en kan ernaast geïnstalleerd worden.
 3. Tik op het **cast-icoon** en kies de Chromecast.
 
 Standaard stuurt de tablet de foto's één voor één naar de Chromecast (de tablet moet dan blijven aanstaan).
@@ -37,3 +37,7 @@ Dan draait de complete fotomuur (met QR-code en zijbalk) zelfstandig op de Chrom
 2. **Add new application → Custom Receiver**. Receiver URL: `https://mchielsen.github.io/feest40/ontvanger/`
 3. Publiceer de app, of registreer het serienummer van de Chromecast (15 min wachten en Chromecast herstarten).
 4. Zet de App-ID in `index.html` bij `CAST_APP_ID`.
+
+## Voor ontwikkelaars
+
+`tv/index.html` wordt gemaakt uit `index.html`: na elke wijziging `python3 tools/maak-tv.py` draaien.
