@@ -494,13 +494,19 @@ if (SCREEN) {
   }
   function pick() {
     if (newQueue.length) return { p: newQueue.shift(), isNew: true };
-    if (!cycle.length) cycle = serverPhotos.slice().sort(() => Math.random() - .5);
+    if (!cycle.length) {
+      cycle = serverPhotos.slice().sort(() => Math.random() - .5);
+      // niet twee keer achter elkaar dezelfde foto bij het opnieuw husselen
+      if (cycle.length > 1 && currentPhoto && cycle[0].id === currentPhoto.id) cycle.push(cycle.shift());
+    }
     return { p: cycle.shift(), isNew: false };
   }
   function next() {
     clearTimeout(timer);
     const item = pick();
     if (!item.p) { timer = null; return; }
+    // dezelfde foto als nu (bijv. er is er maar één): gewoon laten staan, niet opnieuw laten infaden
+    if (currentPhoto && item.p.id === currentPhoto.id && !item.isNew) { timer = setTimeout(next, 6500); return; }
     const nxt = 1 - cur;
     const [img, bg] = layers[nxt];
     const pre = new Image();
