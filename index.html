@@ -110,6 +110,11 @@
   .btn[disabled] { opacity: .45; pointer-events: none; }
   input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 
+  .who-chip { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: -4px 0 14px; padding: 10px 12px 10px 16px; border-radius: 14px; background: var(--bg-2); border: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+  .who-chip b { color: var(--text); font-weight: 600; }
+  .who-chip button { display: inline-flex; align-items: center; gap: 6px; background: var(--panel); border: 1px solid var(--line); color: var(--gold); border-radius: 10px; padding: 7px 11px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .who-chip svg { width: 15px; height: 15px; }
+
   /* ---------- Status ---------- */
   .status { display: none; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line); font-size: 14px; margin-bottom: 16px; }
   .status.show { display: flex; }
@@ -256,7 +261,7 @@
       <svg class="mug r"><use href="#mug"/></svg>
     </div>
     <p class="tagline">Twee keer veertig, dat vieren we dubbel!</p>
-    <div class="hello" id="hello" hidden>Hoi <b id="helloName"></b> · <button id="changeName" type="button">naam wijzigen</button><span id="installLinkWrap" hidden> · <button id="installLink" type="button">app installeren</button></span></div>
+    <div class="hello" id="hello" hidden>Hoi <b id="helloName"></b>! 🍻<span id="installLinkWrap" hidden> · <button id="installLink" type="button">app installeren</button></span></div>
   </header>
 
   <main class="wrap">
@@ -272,6 +277,13 @@
       <button class="btn" id="btnPick" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>
         Kies foto's van je telefoon
+      </button>
+    </div>
+    <div class="who-chip" id="whoChip" hidden>
+      <span>Je deelt foto's als <b id="whoName"></b></span>
+      <button type="button" id="changeName">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        Naam wijzigen
       </button>
     </div>
     <input type="file" id="inCamera" accept="image/*" capture="environment">
@@ -298,9 +310,10 @@
 <div class="modal" id="nameModal" role="dialog" aria-modal="true" aria-labelledby="nameTitle">
   <form class="sheet" id="nameForm">
     <h3 id="nameTitle">Welkom op het feest! 🍻</h3>
-    <p>Wat is je naam? Dan weten Tijn en Martijn wie welke foto heeft gemaakt.</p>
+    <p id="nameText">Wat is je naam? Dan weten Tijn en Martijn wie welke foto heeft gemaakt. Je hoeft dit maar één keer in te vullen.</p>
     <input id="nameInput" type="text" autocomplete="given-name" maxlength="40" placeholder="Je naam" enterkeyhint="done">
-    <button class="btn btn-primary" type="submit" style="width:100%">Aan de slag</button>
+    <button class="btn btn-primary" type="submit" style="width:100%" id="nameGo">Aan de slag</button>
+    <button class="btn-ghost" type="button" id="nameCancel" hidden style="width:100%">Annuleren</button>
   </form>
 </div>
 
@@ -700,20 +713,38 @@ if (!SCREEN) {
   }
 
   /* ---- naam ---- */
-  let guestName = store.get('tm40_name', '');
+  // naam onthouden: localStorage + cookie (1 jaar) als reserve, en vragen om blijvende opslag
+  const cookieName = () => { try { const m = document.cookie.match(/(?:^|; )tm40_name=([^;]*)/); return m ? decodeURIComponent(m[1]) : ''; } catch (e) { return ''; } };
+  const saveName = (n) => {
+    store.set('tm40_name', n);
+    try { document.cookie = 'tm40_name=' + encodeURIComponent(n) + '; max-age=31536000; path=/; SameSite=Lax; Secure'; } catch (e) {}
+  };
+  let guestName = store.get('tm40_name', '') || cookieName();
+  if (guestName) saveName(guestName);
+  try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
   function showName() {
     $('hello').hidden = !guestName;
     $('helloName').textContent = guestName;
+    $('whoChip').hidden = !guestName;
+    $('whoName').textContent = guestName;
   }
   function askName() {
+    const changing = !!guestName;
+    $('nameTitle').textContent = changing ? 'Naam wijzigen' : 'Welkom op het feest! 🍻';
+    $('nameText').textContent = changing
+      ? 'Onder welke naam wil je je foto\'s delen? Foto\'s die je al gedeeld hebt, houden de oude naam.'
+      : 'Wat is je naam? Dan weten Tijn en Martijn wie welke foto heeft gemaakt. Je hoeft dit maar één keer in te vullen.';
+    $('nameGo').textContent = changing ? 'Opslaan' : 'Aan de slag';
+    $('nameCancel').hidden = !changing;
     $('nameInput').value = guestName;
     $('nameModal').classList.add('show');
-    setTimeout(() => $('nameInput').focus(), 50);
+    setTimeout(() => { $('nameInput').focus(); $('nameInput').select(); }, 50);
   }
+  $('nameCancel').addEventListener('click', () => $('nameModal').classList.remove('show'));
   $('nameForm').addEventListener('submit', (e) => {
     e.preventDefault();
     guestName = $('nameInput').value.trim().slice(0, 40) || 'Gast';
-    store.set('tm40_name', guestName);
+    saveName(guestName);
     $('nameModal').classList.remove('show');
     showName();
     if (pendingPick) { const f = pendingPick; pendingPick = null; f(); }
