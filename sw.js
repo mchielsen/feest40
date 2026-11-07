@@ -1,7 +1,7 @@
 // Service worker: maakt de fotoapp installeerbaar en laat hem openen bij slecht bereik.
 // Altijd eerst het netwerk (zodat updates direct doorkomen), anders de opgeslagen versie.
 // Uploads en de fotomuur (Google) gaan hier nooit doorheen.
-const CACHE = 'feest40-v10';
+const CACHE = 'feest40-v11';
 const SHELL = ['./', './index.html', './qr.png', './tijn-martijn.jpg', './icon-192.png', './icon-512.png', './manifest.webmanifest', './manifest-tv.webmanifest', './tv/'];
 
 self.addEventListener('install', (e) => {

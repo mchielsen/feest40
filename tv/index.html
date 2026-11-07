@@ -347,7 +347,6 @@
     <div class="wait" id="scrWait">Nog geen foto's… scan de QR-code en maak de eerste!</div>
     <div class="tv-bar" id="tvBar" hidden>
       <button class="tv-btn tv-cast" id="tvCastWrap" type="button" hidden aria-label="Casten naar tv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 9.95 20M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/><path d="M2 20h.01"/></svg><span id="tvCastTxt">Casten</span></button>
-      <button class="tv-btn" id="tvInstall" type="button" hidden>App installeren</button>
       <button class="tv-btn" id="tvFull" type="button" aria-label="Volledig scherm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
     </div>
     <div class="cast-msg" id="castMsg" role="status"></div>
@@ -544,14 +543,6 @@ if (SCREEN) {
       const d = document.documentElement;
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
       else if (d.requestFullscreen) d.requestFullscreen().catch(() => {});
-    });
-    const updInstall = () => { $('tvInstall').hidden = !installEvt; };
-    updInstall(); window.__onInstallReady = updInstall;
-    $('tvInstall').addEventListener('click', async (e) => {
-      e.stopPropagation();
-      if (!installEvt) return;
-      const evt = installEvt; installEvt = null; updInstall();
-      try { evt.prompt(); await evt.userChoice; } catch (err) {}
     });
 
     // scherm niet laten uitgaan en de muisaanwijzer verbergen
