@@ -472,6 +472,17 @@ if (SCREEN) {
   }
   refresh();
   setInterval(refresh, 8000);
+
+  // scherm niet laten uitgaan en de muisaanwijzer verbergen
+  let wake = null;
+  async function keepAwake() {
+    try { if ('wakeLock' in navigator && !document.hidden) wake = await navigator.wakeLock.request('screen'); } catch (e) {}
+  }
+  keepAwake();
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) keepAwake(); });
+  let cursorTimer = null;
+  const showCursor = () => { document.body.style.cursor = ''; clearTimeout(cursorTimer); cursorTimer = setTimeout(() => document.body.style.cursor = 'none', 3000); };
+  document.addEventListener('mousemove', showCursor); showCursor();
 }
 
 /* ================= APP VOOR GASTEN ================= */
