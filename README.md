@@ -23,7 +23,7 @@ Verwijder de regel in de Sheet **Feest 40 Tijn & Martijn - fotologboek** (en eve
 
 ## Fotomuur op de tv (tablet + Chromecast)
 
-1. Open op de Android-tablet in Chrome: https://mchielsen.github.io/feest40/tv
+1. Open op de Android-tablet in Chrome: https://mchielsen.github.io/fotomuur/
 2. Tik op **App installeren** (rechtsboven). De app "Fotomuur" (icoon met tv-symbool) staat los van de gewone fotoapp en kan ernaast geïnstalleerd worden.
 3. Tik op het **cast-icoon** en kies de Chromecast.
 
@@ -40,4 +40,4 @@ Dan draait de complete fotomuur (met QR-code en zijbalk) zelfstandig op de Chrom
 
 ## Voor ontwikkelaars
 
-`tv/index.html` wordt gemaakt uit `index.html`: na elke wijziging `python3 tools/maak-tv.py` draaien.
+De Fotomuur (repo `fotomuur`) wordt gemaakt uit `index.html`: na elke wijziging `python3 tools/maak-fotomuur.py ../fotomuur` draaien en beide repo's pushen.
