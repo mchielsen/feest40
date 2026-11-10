@@ -643,6 +643,9 @@ if (!SCREEN) {
   const IS_IOS = /iPhone|iPad|iPod/.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const IS_ANDROID = /Android/i.test(UA);
   const IN_APP = /FBAN|FBAV|Instagram|Line\/|Snapchat|; wv\)/.test(UA);
+  // Samsung Internet, Edge, Opera, Firefox e.d. op Android maken een eigen app-pakket dat Google Play Protect
+  // afkeurt ("gemaakt voor een oudere versie van Android"). Alleen via Chrome installeert de app zonder melding.
+  const OTHER_ANDROID_BROWSER = IS_ANDROID && /SamsungBrowser|EdgA|OPR\/|OPT\/|Firefox|FxiOS|MiuiBrowser|HuaweiBrowser|HeyTapBrowser|YaBrowser|DuckDuckGo|Brave/.test(UA);
   const STANDALONE = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
   const canOfferInstall = () => !STANDALONE && !store.get('tm40_installed', false) && (IS_IOS || IS_ANDROID || !!installEvt);
   const SHARE_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>';
@@ -660,6 +663,15 @@ if (!SCREEN) {
       setSteps(IS_IOS
         ? ['Tik op <b>•••</b> of het Deel-icoon ' + SHARE_SVG, 'Kies <b>Open in Safari</b>']
         : ['Tik rechtsboven op <b>⋮</b>', 'Kies <b>Openen in Chrome</b> of <b>Openen in browser</b>']);
+      $('instGo').textContent = 'Begrepen';
+    } else if (OTHER_ANDROID_BROWSER) {
+      instMode = 'otherbrowser';
+      $('instText').textContent = 'Installeer de app via Google Chrome. Vanuit deze browser geeft je telefoon een onterechte waarschuwing. Je kunt de app ook gewoon hier in de browser gebruiken.';
+      setSteps([
+        'Kopieer het adres of scan de QR-code opnieuw en open de pagina in <b>Chrome</b>',
+        'Tik in Chrome op <b>⋮</b> en kies <b>App installeren</b>',
+        'Bevestig met <b>Installeren</b>'
+      ]);
       $('instGo').textContent = 'Begrepen';
     } else if (installEvt) {
       instMode = 'prompt';
@@ -702,7 +714,7 @@ if (!SCREEN) {
   $('installLink').addEventListener('click', showInstall);
   window.__onInstallReady = () => {
     updateInstallLink();
-    if (instMode === 'android') showInstall();   // handmatige uitleg vervangen door de echte knop
+    if (instMode === 'android' && !OTHER_ANDROID_BROWSER) showInstall();   // handmatige uitleg vervangen door de echte knop
   };
   window.addEventListener('appinstalled', () => { store.set('tm40_installed', true); closeInstall(); updateInstallLink(); });
 
